@@ -1,25 +1,44 @@
-library(tidyverse)
+library(tidyverse); library(readxl)
 getwd()
 
+list.files()
 fs::dir_ls()
-data_list <- fs::dir_ls("KCYPS2010 m1[SPSS]")
+
+# 1
+read_excel("KCYPS2010 m1[EXCEL]/KCYPS2010 m1w1.xlsx")
+# 2
+a1 <- file.choose()
+read_excel(a1)
+# 3
+data_list <- fs::dir_ls("KCYPS2010 m1[EXCEL]")
 
 args(foreign::read.spss)
 
+# indexing
+data_list[1]
+
 # import spss data 
-data_w1 <- foreign::read.spss(data_list[1],
-                         use.value.labels = F,
-                         to.data.frame = T)
-data_w1 <- data_w1 %>% tbl_df()
+# data_w1 <- foreign::read.spss(data_list[1],
+#                          use.value.labels = F,
+#                          to.data.frame = T)
+# data_w1 <- data_w1 %>% tbl_df()
+
+data_w1 <- read_excel(data_list[1])
 
 # data select / rename
 "ID"
-"PSY2A"
-"PSY2B"
+"PSY2A01w1"
+"PSY2B01w1"
 "GENDERw1"
 
+# indexing
+
+data_w1[ 1, 1] # data.frame
+data_w1[  , 1]
+data_w1[  , "ID"]
+
 data_w1[, "PSY2A01w1"]
-data_w1[, c("PSY2A01w1","PSY2B01w1")]
+data_w1[, c("ID","PSY2A01w1","PSY2B01w1","GENDERw1")]
 
 data_w1[, 103]
 
@@ -29,8 +48,14 @@ data_w1[[103]]
 data_w1[, c(paste0("PSY2A0",1:9, "w1"), "PSY2A10w1")]
 data_w1[, 103:112]
 
-data_w1 %>% 
-  select("PSY2A10w1")
+
+data_w1[, c("ID","PSY2A01w1","PSY2B01w1","GENDERw1")]
+dplyr::select(data_w1, c("ID","PSY2A01w1","PSY2B01w1","GENDERw1"))
+dplyr::select(data_w1, ID,PSY2A01w1,PSY2B01w1,GENDERw1)
+
+data_w1 %>% dplyr::select(., "PSY2A10w1")
+data_w1 %>% select(., ID, PSY2A10w1, PSY2B10w1, GENDERw1)
+
 
 data_w1 %>% 
   select(103)
@@ -49,8 +74,22 @@ new.data <-
 data_w1 %>% 
   select(p2a_10_w1 = PSY2A10w1)
 
+
+data_w11 <- data_w1 %>% select(., ID, PSY2A10w1, PSY2B10w1, GENDERw1)
+
+data_w12 <- data_w11 %>% 
+  rename(
+    id_number = ID,
+    psy_a     = PSY2A10w1,
+    psy_b     = PSY2B10w1,
+    gender    = GENDERw1
+  )
+
 data_w1 %>% 
   rename(id_num = ID)
+
+data_w1 %>% 
+  rename("id_num" = "ID")
 
 vars <- c(var1 = "cyl", var2 ="am")
 new.data %>% rename_if(startsWith(names(.), "A"), ~paste0("df1_", .))
@@ -94,6 +133,55 @@ mtcars %>%
 ########################################################################
 # Transformation
 
+
+data_w13 <- data_w12 %>% 
+  mutate(
+    sum_psy = psy_a + psy_b,
+    mean_psy = (psy_a+ psy_b)/2
+  )
+
+
+data_w13 %>% 
+  filter(mean_psy < 2)
+
+#
+data_w1 <- read_excel(data_list[1])
+data_ready <- data_w1 %>% 
+  select(ID, PSY2A01w1, PSY2B01w1, GENDERw1) %>% 
+  rename(
+    id = ID,
+    psy_a = PSY2A01w1, 
+    psy_b = PSY2B01w1, 
+    gender = GENDERw1
+  ) %>% 
+  mutate(
+    sum_psy = psy_a + psy_b,
+    mean_psy = (psy_a + psy_b)/2,
+  ) # %>% 
+    # filter(mean_psy < 2)
+
+data_ready %>% filter(gender == 1) %>% select(sum_psy) %>% colMeans()
+
+data_ready %>% filter(gender == 2) %>% select(sum_psy) %>% colMeans()
+
+
+data_ready %>% 
+  group_by(gender) %>% 
+  summarise(
+    group.mean = mean(sum_psy)
+  )
+
+
+data_ready %>% 
+  filter(sum_psy > 0) %>% 
+  mutate(gender = factor(gender)) %>% 
+  ggplot() +
+  geom_boxplot(
+    aes(x = gender, y = sum_psy, colour = gender)
+  ) + 
+  theme_void()
+
+#
 data_w1_1 %>%
   # select(matches("^selfes")) %>%
   select(3:5) %>%
